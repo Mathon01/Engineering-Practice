@@ -26,7 +26,7 @@ export default function Dashboard() {
       <PageHeader
         title="Dashboard"
         description={`最近采集：${latestJob ? `${latestJob.job_type} · ${formatTime(latestJob.finished_at)}` : '-'}`}
-        extra={<Button icon={<ReloadOutlined />} onClick={load}>刷新</Button>}
+        extra={<Button icon={<ReloadOutlined />} onClick={() => load(true)}>刷新</Button>}
       />
 
       <Row gutter={[16, 16]}>

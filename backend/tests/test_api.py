@@ -5,10 +5,11 @@ os.environ["AUTO_SEED_DEMO_DATA"] = "false"
 
 import pandas as pd
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 
 from app.api import router as api_router
 from app.main import app
-from app.database import SessionLocal
+from app.database import SessionLocal, engine
 from app.models import KlineDaily, News
 from app.services.real_collector_service import AkshareCollector
 
@@ -113,3 +114,31 @@ def test_collect_and_query_watchlist_intraday_5m(monkeypatch):
         assert body["items"][0]["period_minutes"] == 5
         assert body["items"][0]["bar_time"] == "2026-05-03T09:35:00"
         assert body["items"][-1]["bar_time"] == "2026-05-12T09:40:00"
+
+
+def test_advice_summary_uses_bounded_queries(monkeypatch):
+    monkeypatch.setattr(api_router, "AkshareCollector", lambda: AkshareCollector(FakeAkshare(), sleep_fn=lambda _: None))
+    with TestClient(app) as client:
+        client.post("/api/v1/collector/real/bootstrap")
+        statements: list[str] = []
+
+        def before_cursor_execute(conn, cursor, statement, parameters, context, executemany):
+            if statement.lstrip().lower().startswith("select"):
+                statements.append(statement)
+
+        event.listen(engine, "before_cursor_execute", before_cursor_execute)
+        try:
+            response = client.get("/api/v1/advice")
+        finally:
+            event.remove(engine, "before_cursor_execute", before_cursor_execute)
+
+        assert response.status_code == 200
+        assert response.json()["total"] == 5
+        assert len(statements) <= 3
+
+
+def test_settings_watchlist_limit_is_20():
+    with TestClient(app) as client:
+        response = client.get("/api/v1/settings")
+        assert response.status_code == 200
+        assert response.json()["risk_control"]["max_watchlist_size"] == 20

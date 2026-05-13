@@ -52,7 +52,7 @@ class Settings:
 
     request_min_interval_seconds: int = _int("REQUEST_MIN_INTERVAL_SECONDS", 3)
     fetch_failure_downgrade_threshold: int = _int("FETCH_FAILURE_DOWNGRADE_THRESHOLD", 3)
-    max_watchlist_size: int = _int("MAX_WATCHLIST_SIZE", 50)
+    max_watchlist_size: int = _int("MAX_WATCHLIST_SIZE", 20)
 
     market_data_primary: str = os.getenv("MARKET_DATA_PRIMARY", "akshare")
     market_data_fallback: str = os.getenv("MARKET_DATA_FALLBACK", "public_web")

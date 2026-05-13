@@ -161,13 +161,16 @@ def stock_news(code: str, limit: int = Query(20, ge=1, le=100), db: Session = De
 
 @router.get("/advice")
 def advice_summary(signal: str | None = None, db: Session = Depends(get_db)) -> dict[str, Any]:
-    rows: list[dict[str, Any]] = []
-    for stock in db.execute(select(Stock).where(Stock.security_type == "stock").order_by(Stock.code)).scalars().all():
-        advice = _latest_advice(db, stock.id)
-        if advice is not None:
-            item = advice_dict(advice, stock)
-            if signal is None or item["signal"] == signal:
-                rows.append(item)
+    latest = select(TradingAdvice.stock_id, func.max(TradingAdvice.id).label("latest_id")).group_by(TradingAdvice.stock_id).subquery()
+    stmt = (
+        select(TradingAdvice, Stock)
+        .join(Stock, TradingAdvice.stock_id == Stock.id)
+        .join(latest, TradingAdvice.id == latest.c.latest_id)
+        .where(Stock.security_type == "stock")
+    )
+    if signal:
+        stmt = stmt.where(TradingAdvice.signal == signal)
+    rows = [advice_dict(row, stock) for row, stock in db.execute(stmt).all()]
     rows.sort(key=lambda item: item["confidence"], reverse=True)
     return {"items": rows, "total": len(rows)}
 

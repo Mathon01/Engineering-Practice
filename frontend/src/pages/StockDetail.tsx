@@ -15,7 +15,7 @@ import TechnicalIndicators from '../features/stock-detail/components/TechnicalIn
 import type { Advice, IntradayKline, Kline, NewsItem, Snapshot, Stock } from '../types';
 
 type StockDetailData = Stock & { latest_snapshot?: Snapshot | null; latest_advice?: Advice | null; is_watched: boolean };
-type KlineMode = 'daily' | 'intraday';
+type KlineMode = 'daily' | 'intraday' | 'latest_intraday';
 
 export default function StockDetail() {
   const { code = '' } = useParams();
@@ -77,7 +77,12 @@ export default function StockDetail() {
   };
 
   const klineOption = useMemo(() => createKlineOption(kline), [kline]);
+  const latestIntraday = useMemo(() => {
+    const latestDate = intraday.at(-1)?.bar_time.slice(0, 10);
+    return latestDate ? intraday.filter((item) => item.bar_time.startsWith(latestDate)) : [];
+  }, [intraday]);
   const intradayOption = useMemo(() => createIntradayKlineOption(intraday), [intraday]);
+  const latestIntradayOption = useMemo(() => createIntradayKlineOption(latestIntraday), [latestIntraday]);
   const snapshotOption = useMemo(() => createSnapshotOption(snapshots), [snapshots]);
 
   if (loading) return <Spin fullscreen tip="加载个股详情" />;
@@ -108,7 +113,7 @@ export default function StockDetail() {
       <Row gutter={[16, 16]} className="section-gap">
         <Col xs={24} xl={15}>
           <Card
-            title={klineMode === 'daily' ? '历史日 K 与均线' : '5 分钟 K 与均线'}
+            title={klineMode === 'daily' ? '历史日 K 与均线' : klineMode === 'intraday' ? '10 日 5 分钟 K 与均线' : '最近交易日 5 分钟 K 与均线'}
             extra={(
               <Segmented
                 size="small"
@@ -116,12 +121,16 @@ export default function StockDetail() {
                 onChange={(value) => setKlineMode(value as KlineMode)}
                 options={[
                   { label: '日 K', value: 'daily' },
-                  { label: '5 分钟', value: 'intraday' },
+                  { label: '10日5分', value: 'intraday' },
+                  { label: '最近日5分', value: 'latest_intraday' },
                 ]}
               />
             )}
           >
-            <ReactECharts option={klineMode === 'daily' ? klineOption : intradayOption} className="chart-panel" />
+            <ReactECharts
+              option={klineMode === 'daily' ? klineOption : klineMode === 'intraday' ? intradayOption : latestIntradayOption}
+              className="chart-panel"
+            />
           </Card>
         </Col>
         <Col xs={24} xl={9}>
