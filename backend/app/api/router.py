@@ -113,22 +113,30 @@ def get_stock_snapshots(code: str, limit: int = Query(120, ge=1, le=1000), db: S
 
 @router.get("/market/snapshot")
 def market_snapshot(page: int = Query(1, ge=1), page_size: int = Query(50, ge=1, le=300), q: str | None = None, market: str | None = None, industry: str | None = None, change_min: float | None = None, change_max: float | None = None, sort_by: str = "change_pct", sort_order: str = "desc", db: Session = Depends(get_db)) -> dict[str, Any]:
-    rows = _latest_market_rows(db)
+    subq = select(MarketSnapshot.stock_id, func.max(MarketSnapshot.snapshot_time).label("max_time")).group_by(MarketSnapshot.stock_id).subquery()
+    stmt = (
+        select(MarketSnapshot, Stock)
+        .join(Stock, MarketSnapshot.stock_id == Stock.id)
+        .join(subq, and_(MarketSnapshot.stock_id == subq.c.stock_id, MarketSnapshot.snapshot_time == subq.c.max_time))
+    )
     if q:
         needle = q.lower().strip()
-        rows = [(s, stock) for s, stock in rows if needle in stock.code.lower() or needle in stock.name.lower() or needle in (stock.industry or "").lower()]
+        like = f"%{needle}%"
+        stmt = stmt.where(or_(Stock.code.ilike(like), Stock.name.ilike(like), Stock.industry.ilike(like)))
     if market:
-        rows = [(s, stock) for s, stock in rows if stock.market == market]
+        stmt = stmt.where(Stock.market == market)
     if industry:
-        rows = [(s, stock) for s, stock in rows if stock.industry == industry]
+        stmt = stmt.where(Stock.industry == industry)
     if change_min is not None:
-        rows = [(s, stock) for s, stock in rows if s.change_pct is not None and float(s.change_pct) >= change_min]
+        stmt = stmt.where(MarketSnapshot.change_pct >= change_min)
     if change_max is not None:
-        rows = [(s, stock) for s, stock in rows if s.change_pct is not None and float(s.change_pct) <= change_max]
-    rows.sort(key=lambda pair: _sort_value(pair[0], pair[1], sort_by), reverse=sort_order.lower() != "asc")
-    total = len(rows)
-    start = (page - 1) * page_size
-    return {"items": [snapshot_dict(snapshot, stock) for snapshot, stock in rows[start : start + page_size]], "total": total, "page": page, "page_size": page_size}
+        stmt = stmt.where(MarketSnapshot.change_pct <= change_max)
+    sort_column = _market_sort_column(sort_by)
+    sort_expr = sort_column.asc() if sort_order.lower() == "asc" else sort_column.desc()
+    stmt = stmt.order_by(sort_expr.nulls_last())
+    total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
+    rows = db.execute(stmt.offset((page - 1) * page_size).limit(page_size)).all()
+    return {"items": [snapshot_dict(snapshot, stock) for snapshot, stock in rows], "total": total, "page": page, "page_size": page_size}
 
 
 @router.get("/news")
@@ -336,8 +344,21 @@ def _latest_market_rows(db: Session) -> list[tuple[MarketSnapshot, Stock]]:
     return list(db.execute(stmt).all())
 
 
-def _sort_value(snapshot: MarketSnapshot, stock: Stock, sort_by: str) -> Any:
-    if sort_by in {"code", "name", "market", "industry"}:
-        return getattr(stock, sort_by) or ""
-    value = getattr(snapshot, sort_by, None)
-    return float(value) if value is not None else -999999999
+def _market_sort_column(sort_by: str) -> Any:
+    stock_columns = {"code": Stock.code, "name": Stock.name, "market": Stock.market, "industry": Stock.industry}
+    if sort_by in stock_columns:
+        return stock_columns[sort_by]
+    snapshot_columns = {
+        "price": MarketSnapshot.price,
+        "change_pct": MarketSnapshot.change_pct,
+        "change_amount": MarketSnapshot.change_amount,
+        "volume": MarketSnapshot.volume,
+        "amount": MarketSnapshot.amount,
+        "turnover_rate": MarketSnapshot.turnover_rate,
+        "volume_ratio": MarketSnapshot.volume_ratio,
+        "pe": MarketSnapshot.pe,
+        "pb": MarketSnapshot.pb,
+        "total_mv": MarketSnapshot.total_mv,
+        "circ_mv": MarketSnapshot.circ_mv,
+    }
+    return snapshot_columns.get(sort_by, MarketSnapshot.change_pct)
