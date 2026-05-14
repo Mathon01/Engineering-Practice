@@ -27,6 +27,25 @@ CREATE TABLE IF NOT EXISTS kline_daily (
   PRIMARY KEY (stock_id, trade_date)
 );
 
+CREATE TABLE IF NOT EXISTS kline_intraday (
+  stock_id BIGINT NOT NULL REFERENCES stocks(id),
+  period_minutes INTEGER NOT NULL,
+  bar_time TIMESTAMP NOT NULL,
+  open NUMERIC(18,4),
+  high NUMERIC(18,4),
+  low NUMERIC(18,4),
+  close NUMERIC(18,4),
+  volume BIGINT,
+  amount NUMERIC(24,4),
+  amplitude NUMERIC(10,4),
+  change_pct NUMERIC(10,4),
+  change_amount NUMERIC(18,4),
+  turnover_rate NUMERIC(10,4),
+  source VARCHAR(64) NOT NULL DEFAULT 'akshare',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (stock_id, period_minutes, bar_time)
+);
+
 CREATE TABLE IF NOT EXISTS market_snapshot (
   id BIGSERIAL PRIMARY KEY,
   snapshot_time TIMESTAMPTZ NOT NULL,
@@ -139,4 +158,3 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   sent_at TIMESTAMPTZ
 );
-

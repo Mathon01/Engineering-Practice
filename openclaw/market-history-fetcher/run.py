@@ -9,8 +9,9 @@ from common.scheduler import run_task
 
 
 def main() -> None:
-    print(run_task("market-data-fetcher", enforce_trading_hours=False))
+    print(run_task("market-history-fetcher", enforce_trading_hours=False))
 
 
 if __name__ == "__main__":
     main()
+

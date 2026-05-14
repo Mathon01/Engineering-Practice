@@ -5,12 +5,13 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from common.scheduler import run_task
+from common.scheduler import run_forever
 
 
 def main() -> None:
-    print(run_task("market-data-fetcher", enforce_trading_hours=False))
+    run_forever()
 
 
 if __name__ == "__main__":
     main()
+

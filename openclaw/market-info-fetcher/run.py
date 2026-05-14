@@ -5,13 +5,13 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from common.client import post_json
+from common.scheduler import run_task
 
 
 def main() -> None:
-    print(post_json("/api/v1/collector/demo/news"))
+    # news collection disabled until a real source is implemented.
+    print(run_task("market-info-fetcher", enforce_trading_hours=False))
 
 
 if __name__ == "__main__":
     main()
-

@@ -5,14 +5,12 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from common.client import post_json
+from common.scheduler import run_task
 
 
 def main() -> None:
-    result = post_json("/api/v1/analysis/watchlist")
-    print({"analyzed": result.get("total", 0)})
+    print(run_task("market-analysis-trigger", enforce_trading_hours=False))
 
 
 if __name__ == "__main__":
     main()
-

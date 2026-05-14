@@ -9,7 +9,7 @@ export default function SettingsCards({ settings }: { settings: Record<string, a
           <Descriptions.Item label="环境">{settings?.app_env}</Descriptions.Item>
           <Descriptions.Item label="数据库">{settings?.database}</Descriptions.Item>
           <Descriptions.Item label="数据源">{settings?.market_data_primary}</Descriptions.Item>
-          <Descriptions.Item label="自动演示数据">{String(settings?.auto_seed_demo_data)}</Descriptions.Item>
+          <Descriptions.Item label="启动自动填充">{String(settings?.auto_seed_demo_data)}</Descriptions.Item>
           <Descriptions.Item label="分析引擎">{settings?.analysis_engine}</Descriptions.Item>
         </Descriptions>
       </Card>

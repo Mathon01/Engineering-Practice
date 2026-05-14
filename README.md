@@ -9,7 +9,7 @@
 - 资讯：本轮暂不处理新闻采集，页面不再展示演示新闻。
 - 策略：MA、MACD、RSI、BOLL、KDJ、量能、区间位置和新闻聚合的本地规则引擎。
 - 前端：Dashboard、Market、StockDetail、News、Advice、Settings、Notifications。
-- OpenClaw/QQBot：本轮不处理，保留目录但不作为当前验收项。
+- OpenClaw/QQBot：OpenClaw 脚本已接真实接口并提供本地 scheduler；QQBot 仍默认 dry-run。
 - 成本：默认不依赖付费 API、在线 LLM、云服务器或云数据库。
 
 ## 本地运行
@@ -52,16 +52,24 @@ $env:PGPASSWORD='change_me'
 
 ## OpenClaw 脚本
 
-OpenClaw 本轮暂不处理。以下脚本目录保留，但当前真实采集应优先使用后端 `/collector/real/*` 接口：
+OpenClaw 脚本已切换到真实后端接口，不再调用 demo 采集端点。新闻采集脚本当前明确跳过；QQBot 仍默认 dry-run。
 
 ```powershell
 .\.venv\Scripts\python openclaw\market-data-fetcher\run.py
+.\.venv\Scripts\python openclaw\market-intraday-fetcher\run.py
+.\.venv\Scripts\python openclaw\market-history-fetcher\run.py
 .\.venv\Scripts\python openclaw\market-info-fetcher\run.py
 .\.venv\Scripts\python openclaw\market-analysis-trigger\run.py
 .\.venv\Scripts\python openclaw\market-alert-publisher\run.py
 ```
 
-这些脚本仍可能指向旧编排流程，不作为本轮真实数据验收项。
+本机长期运行可使用轻量调度入口：
+
+```powershell
+.\.venv\Scripts\python openclaw\local-scheduler\run.py
+```
+
+默认频率：全市场快照 300 秒、策略分析 900 秒且仅交易时段执行；历史日 K 和 5 分钟 K 默认 86400 秒，避免高频抓取。
 
 ## 验证
 
