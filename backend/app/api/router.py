@@ -144,7 +144,7 @@ def get_kline(code: str, limit: int = Query(90, ge=1, le=500), db: Session = Dep
 
 
 @router.get("/stocks/{code}/intraday")
-def get_intraday_kline(code: str, period: int = Query(1, ge=1, le=60), days: int = Query(10, ge=1, le=30), db: Session = Depends(get_db)) -> dict[str, Any]:
+def get_intraday_kline(code: str, period: int = Query(5, ge=1, le=60), days: int = Query(10, ge=1, le=30), db: Session = Depends(get_db)) -> dict[str, Any]:
     stock = _get_stock_or_404(db, code)
     rows_desc = db.execute(
         select(KlineIntraday)
@@ -389,7 +389,7 @@ def collect_real_full_market_history(
 
 
 @router.post("/collector/real/intraday")
-def collect_real_intraday(trading_days: int = Query(10, ge=1, le=30), period: int = Query(1, ge=1, le=60), db: Session = Depends(get_db)) -> dict[str, Any]:
+def collect_real_intraday(trading_days: int = Query(10, ge=1, le=30), period: int = Query(5, ge=1, le=60), db: Session = Depends(get_db)) -> dict[str, Any]:
     try:
         return AkshareCollector().collect_intraday(db, trading_days=trading_days, period_minutes=period)
     except ValueError as exc:

@@ -24,7 +24,8 @@ export default function StockDetail() {
   const [loading, setLoading] = useState(true);
   const [stock, setStock] = useState<StockDetailData | null>(null);
   const [kline, setKline] = useState<Kline[]>([]);
-  const [intraday, setIntraday] = useState<IntradayKline[]>([]);
+  const [intraday1m, setIntraday1m] = useState<IntradayKline[]>([]);
+  const [intraday5m, setIntraday5m] = useState<IntradayKline[]>([]);
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [history, setHistory] = useState<Advice[]>([]);
@@ -37,17 +38,19 @@ export default function StockDetail() {
     if (!code) return;
     if (showSpinner) setLoading(true);
     try {
-      const [stockRes, klineRes, intradayRes, snapshotRes, newsRes, historyRes] = await Promise.all([
+      const [stockRes, klineRes, currentIntradayRes, tenDayIntradayRes, snapshotRes, newsRes, historyRes] = await Promise.all([
         api.stock(code),
         api.kline(code, 90),
-        api.intraday(code, 1, 10),
+        api.intraday(code, 1, 1),
+        api.intraday(code, 5, 10),
         api.stockSnapshots(code, 160),
         api.stockNews(code, 10),
         api.adviceHistory(code, 20),
       ]);
       setStock(stockRes);
       setKline(klineRes.items);
-      setIntraday(intradayRes.items);
+      setIntraday1m(currentIntradayRes.items);
+      setIntraday5m(tenDayIntradayRes.items);
       setSnapshots(snapshotRes.items);
       setNews(newsRes.items);
       setHistory(historyRes.items);
@@ -110,10 +113,10 @@ export default function StockDetail() {
 
   const klineOption = useMemo(() => createKlineOption(kline), [kline]);
   const latestIntraday = useMemo(() => {
-    const latestDate = intraday.at(-1)?.bar_time.slice(0, 10);
-    return latestDate ? intraday.filter((item) => item.bar_time.startsWith(latestDate)) : [];
-  }, [intraday]);
-  const intradayOption = useMemo(() => createIntradayKlineOption(intraday), [intraday]);
+    const latestDate = intraday1m.at(-1)?.bar_time.slice(0, 10);
+    return latestDate ? intraday1m.filter((item) => item.bar_time.startsWith(latestDate)) : [];
+  }, [intraday1m]);
+  const intradayOption = useMemo(() => createIntradayKlineOption(intraday5m), [intraday5m]);
   const latestIntradayOption = useMemo(() => createIntradayKlineOption(latestIntraday), [latestIntraday]);
   const snapshotOption = useMemo(() => createSnapshotOption(snapshots), [snapshots]);
 
@@ -122,8 +125,10 @@ export default function StockDetail() {
 
   const advice = history[0] ?? stock.latest_advice;
   const indicators = advice?.indicators ?? {};
-  const latestIntradayTime = latestIntraday.at(-1)?.bar_time || intraday.at(-1)?.bar_time;
-  const klineTitle = klineMode === 'daily' ? '历史日 K 与均线' : klineMode === 'intraday' ? '10 日 1 分钟 K 与均线' : '当前交易日 1 分钟 K 与均线';
+  const latestIntradayTime = klineMode === 'intraday'
+    ? intraday5m.at(-1)?.bar_time
+    : latestIntraday.at(-1)?.bar_time || intraday1m.at(-1)?.bar_time;
+  const klineTitle = klineMode === 'daily' ? '历史日 K 与均线' : klineMode === 'intraday' ? '10 日 5 分钟 K 与均线' : '当前交易日 1 分钟 K 与均线';
 
   return (
     <>
@@ -163,7 +168,7 @@ export default function StockDetail() {
                   onChange={(value) => setKlineMode(value as KlineMode)}
                   options={[
                     { label: '当前1分', value: 'latest_intraday' },
-                    { label: '10日1分', value: 'intraday' },
+                    { label: '10日5分', value: 'intraday' },
                     { label: '日 K', value: 'daily' },
                   ]}
                 />

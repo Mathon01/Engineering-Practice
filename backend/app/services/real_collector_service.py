@@ -212,7 +212,7 @@ class AkshareCollector:
         db.commit()
         return result
 
-    def collect_intraday(self, db: Session, trading_days: int = 10, period_minutes: int = 1) -> dict[str, Any]:
+    def collect_intraday(self, db: Session, trading_days: int = 10, period_minutes: int = 5) -> dict[str, Any]:
         if period_minutes not in {1, 5, 15, 30, 60}:
             raise ValueError("period_minutes must be one of 1, 5, 15, 30, 60")
         ensure_default_watchlist(db)
